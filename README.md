@@ -4,7 +4,7 @@ Consortiums."
 The repository includes three distinct codes designed to test the authentication and key agreement protocol against various attacks. Additionally, it evaluates whether the protocol provides perfect forward secrecy.
 Codes and Testing Scenarios
 
-    Testing Common Attacks
+    Testing Common Attacks (common.pv)
         This code assesses the authentication and key agreement protocol's resilience against common attacks in a smart grid context.
 
     Testing Key Compromise Impersonation (KCI) Attack
