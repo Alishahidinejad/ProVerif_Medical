@@ -1,0 +1,132 @@
+(* Channel Definition *)
+free LedgerNet : channel [private].
+free PriNet : channel [private].
+free PubNet : channel.
+
+(* Private Terms *)
+free ID_P : bitstring [private].
+free PW_P : bitstring [private].
+free ID_D : bitstring [private].
+free SK_S : bitstring [private].
+free SSK : bitstring [private].
+
+(* Public Terms *)
+free ID_S : bitstring.
+free ID_G : bitstring.
+const P : bitstring.
+
+(* Functions *)
+fun SymEnc(bitstring, bitstring): bitstring.
+fun ConcatTwo(bitstring, bitstring) : bitstring.
+fun ConcatThree(bitstring, bitstring, bitstring) : bitstring.
+fun HashFunThree(bitstring, bitstring, bitstring) : bitstring.
+fun HashFunOne(bitstring) : bitstring.
+fun PointMul(bitstring, bitstring) : bitstring.
+fun HashFunFive(bitstring, bitstring, bitstring, bitstring, bitstring) : bitstring.
+fun HashFunFour(bitstring, bitstring, bitstring, bitstring) : bitstring.
+
+(* Destructors *)
+reduc forall m1 : bitstring, m2 : bitstring; SymDec(SymEnc(m1, m2), m2) = m1.
+reduc forall m1 : bitstring, m2 : bitstring; SeparateFirst2(ConcatTwo(m1, m2)) = m1.
+reduc forall m1 : bitstring, m2 : bitstring; SeparateSecond2(ConcatTwo(m1, m2)) = m2.
+reduc forall m1 : bitstring, m2 : bitstring, m3 : bitstring; SeparateFirst3(ConcatThree(m1, m2, m3)) = m1.
+reduc forall m1 : bitstring, m2 : bitstring, m3 : bitstring; SeparateSecond3(ConcatThree(m1, m2, m3)) = m2.
+reduc forall m1 : bitstring, m2 : bitstring, m3 : bitstring; SeparateThird3(ConcatThree(m1, m2, m3)) = m3.
+
+(* Equations *)
+equation forall m1 : bitstring, m2 : bitstring; PointMul(m1, PointMul(m2, P)) = PointMul(m2, PointMul(m1, P)).
+
+(* queries *)
+query attacker (ID_P).       (* Revealed to adversary to check PFS *)
+query attacker (ID_D).       (* Revealed to adversary to check PFS *)
+query attacker (PW_P).       (* Revealed to adversary to check PFS *)
+query attacker (SK_S).       (* Revealed to adversary to check PFS *)
+query attacker (SSK).        (* To check the secrecy of session key *)
+
+(* Events *)
+event SessionInitiation (bitstring).
+event SessionTermination (bitstring).
+
+(* General Hospital *)
+let pGH=
+new SK_G : bitstring;
+new R_G : bitstring;
+new R_GN : bitstring;
+new TS_G : bitstring;
+let PK_G = PointMul(SK_G, P) in
+out (PriNet, PK_G);
+in (PriNet, PK_S : bitstring);
+out (LedgerNet, (PK_S));
+let EID_P = SymEnc(ConcatThree(ID_P, ID_D, R_G), SK_G) in
+let X_P = HashFunThree(ID_P, ID_D, SK_G) in
+out (PriNet, (EID_P, X_P));
+in (PubNet, (xEID_P : bitstring, xE_D : bitstring, xV_D : bitstring, xTS_D : bitstring));
+let temp0 = SymDec(xEID_P, SK_G) in
+let xID_P = SeparateFirst3(temp0) in
+let xID_D = SeparateSecond3(temp0) in
+let xR_G = SeparateThird3(temp0) in
+let xX_P = HashFunThree(xID_P, xID_D, SK_G) in
+let temp1 = SymDec(xE_D, xX_P) in
+let xP_D = SeparateFirst2(temp1) in
+let xID_S = SeparateSecond2(temp1) in
+let xxV_D = HashFunFive(xP_D, xID_S, xID_P, xID_D, xTS_D) in
+if (xV_D = xxV_D) then
+in (LedgerNet, (xPK_S : bitstring));
+let P_G = PointMul(SK_G, xPK_S) in
+let E_GS = SymEnc(xP_D, P_G) in
+let V_GS = HashFunThree(xP_D, ID_G, TS_G) in
+out (PubNet, (ID_G, E_GS, V_GS, TS_G));
+in (PubNet, (xxID_S : bitstring, xE_S : bitstring, xV_S : bitstring));
+let temp2 = SymDec(xE_S, P_G) in
+let xP_S = SeparateFirst2(temp2) in
+let HSSK = SeparateSecond2(temp2) in
+let xxV_S = HashFunFive(xP_S, xP_D, xxID_S, TS_G, HSSK) in
+if (xV_S = xxV_S) then
+let EID_PN = SymEnc(ConcatThree(ID_P, ID_D, R_GN), SK_G) in
+let E_GD = SymEnc(ConcatTwo(xP_S, EID_PN), X_P) in
+let V_GD = HashFunFive(xP_S, ID_G, xTS_D, EID_PN, HSSK) in
+out (PubNet, (E_GD, V_GD));
+0.
+
+(* Special Hospital *)
+let pSH=
+new R_S : bitstring;
+in (PriNet, PK_G : bitstring);
+let PK_S = PointMul(SK_S, P) in
+out (PriNet, PK_S);
+in (PubNet, (xID_G : bitstring, xE_GS : bitstring, xV_GS : bitstring, xTS_G : bitstring));
+let P_G = PointMul(SK_S, PK_G) in
+let xP_D = SymDec(xE_GS, P_G) in
+let xxV_GS = HashFunThree(xP_D, xID_G, xTS_G) in
+if (xxV_GS = xV_GS) then
+let P_S = PointMul(HashFunFour(R_S, xID_G, ID_S, SK_S), P) in
+let SSK_S = PointMul(HashFunFour(R_S, xID_G, ID_S, SK_S), xP_D) in
+out (PubNet, SymEnc(SSK, SSK_S));
+let E_S = SymEnc(ConcatTwo(P_S, HashFunOne(SSK_S)), P_G) in
+let V_S = HashFunFive(P_S, xP_D, ID_S, xTS_G, HashFunOne(SSK_S)) in
+out (PubNet, (ID_S, E_S, V_S));
+0.
+
+(* Patient *)
+let pP=
+new R_D : bitstring;
+new TS_D : bitstring;
+in (PriNet, (EID_P : bitstring, X_P : bitstring));
+let P_D = PointMul(HashFunFour(R_D, ID_D, ID_P, PW_P), P) in
+let E_D = SymEnc(ConcatTwo(P_D, ID_S), X_P) in
+let V_D = HashFunFive(P_D, ID_S, ID_P, ID_D, TS_D) in
+event SessionInitiation (ID_P);
+out (PubNet, (EID_P, E_D, V_D, TS_D));
+in (PubNet, (xE_GD : bitstring, xV_GD : bitstring));
+let temp0 = SymDec(xE_GD, X_P) in
+let xP_S = SeparateFirst2(temp0) in
+let xEID_PN = SeparateSecond2(temp0) in
+let SSK_P = PointMul(HashFunFour(R_D, ID_D, ID_P, PW_P), xP_S) in
+out (PubNet, SymEnc(SSK, SSK_P));
+let xxV_GD = HashFunFive(xP_S, ID_G, TS_D, xEID_PN, SSK_P) in
+if (xV_GD = xxV_GD) then
+event SessionTermination(ID_P);
+0.
+
+process
+  ((pGH) | (!pSH) | (!pP) | (phase 1 ; out (PubNet, (ID_D, ID_P, PW_P, SK_S)))) (* To check the perfect forward secrecy *)
