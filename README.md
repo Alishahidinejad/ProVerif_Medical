@@ -6,10 +6,8 @@ The repository includes three distinct codes designed to test the authentication
 Codes and Testing Scenarios:
     Testing Common Attacks (common.pv)
         This code assesses the authentication and key agreement protocol's resilience against common attacks in a smart grid context.
-
     Testing Ephemeral Secret Leakage (ESL) Attack (KSSTIA.pv)
         Focusing on ephemeral secret leakage, this code examines the protocol's resistance to potential threats in this area.
-
     Testing Perfect Forward Secrecy (PFS) (PFS.pv)
         This code is dedicated to testing and verifying the protocol's adherence to the perfect forward secrecy property.
 
